@@ -2,57 +2,59 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Remote Tool KHANHPC</title>
 <link rel="icon" href="GD.png" type="image/png">
-
 <style>
 :root {
     --main: #00ffcc;
+    --accent: #00b3ff;
     --bg: #0e0e0e;
     --card: #1a1a1a;
+    --text: #fff;
 }
 
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; margin:0; padding:0; font-family:'Segoe UI', sans-serif; }
 
 body {
     background: radial-gradient(circle at top, #1f1f1f, #000);
-    font-family: 'Segoe UI', sans-serif;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    color: var(--text);
+    padding:10px;
 }
 
 .card {
     background: var(--card);
-    padding: 35px 45px;
-    border-radius: 18px;
-    width: 360px;
-    box-shadow: 0 0 30px rgba(0,255,204,.15);
-    animation: fadeIn .8s ease;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 20px;
+    padding: 30px 25px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(0,255,204,.15);
+    animation: fadeIn 0.8s ease;
 }
 
 h1 {
-    margin: 0 0 25px;
-    font-size: 26px;
+    font-size: 28px;
     color: var(--main);
+    margin-bottom: 25px;
     text-shadow: 0 0 12px rgba(0,255,204,.6);
 }
 
 button {
     width: 100%;
-    padding: 14px;
-    margin: 10px 0;
-    font-size: 16px;
+    padding: 16px;
+    margin: 12px 0;
+    font-size: 18px;
     font-weight: bold;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     cursor: pointer;
-    background: linear-gradient(135deg, #00ffcc, #00b3ff);
-    color: black;
+    background: linear-gradient(135deg, var(--main), var(--accent));
+    color: #000;
     transition: 0.3s;
 }
 
@@ -67,46 +69,44 @@ button:disabled {
 }
 
 .status {
-    margin-top: 25px;
+    margin-top: 20px;
     min-height: 60px;
     padding: 15px;
-    border-radius: 10px;
+    border-radius: 12px;
     background: #111;
-    word-break: break-all;
-    font-size: 15px;
+    word-break: break-word;
+    font-size: 16px;
 }
 
 .key {
     color: var(--main);
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
 }
 
 .loader {
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     border: 4px solid rgba(255,255,255,.2);
     border-top: 4px solid var(--main);
     border-radius: 50%;
-    margin: 10px auto;
+    margin: 15px auto;
     animation: spin 1s linear infinite;
 }
 
-.hidden {
-    display: none;
-}
+.hidden { display: none; }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from {opacity:0; transform:scale(.95);} to {opacity:1; transform:scale(1);} }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(.95); }
-    to { opacity: 1; transform: scale(1); }
+/* Responsive */
+@media (max-width: 480px) {
+    h1 { font-size:24px; }
+    button { font-size:16px; padding:14px; }
+    .status { font-size:14px; }
 }
 </style>
 </head>
-
 <body>
 
 <div class="card">
@@ -115,10 +115,7 @@ button:disabled {
     <button id="btnGet" onclick="getKey()">🔑 LẤY MÃ</button>
     <button id="btnVerify" onclick="verify()" disabled>✅ XÁC THỰC</button>
 
-    <div class="status" id="status">
-        Chưa có mã
-    </div>
-
+    <div class="status" id="status">Chưa có mã</div>
     <div class="loader hidden" id="loader"></div>
 </div>
 
@@ -132,47 +129,48 @@ function getKey() {
     btnGet.disabled = true;
     btnVerify.disabled = true;
     loader.classList.remove("hidden");
-
-    statusBox.innerHTML = "⏳ Đang lấy mã... <br> <small>đừng sờ chuột 😅</small>";
+    statusBox.innerHTML = "⏳ Đang lấy mã... <br><small>Đừng sờ chuột 😅</small>";
 
     fetch("/start", { method: "POST" });
 
-    setTimeout(() => {
-        fetch("/key")
-            .then(r => r.json())
-            .then(d => {
+    let tries = 0;
+    const interval = setInterval(() => {
+        fetch("/key").then(r => r.json()).then(d => {
+            if (d.key) {
                 loader.classList.add("hidden");
-
-                if (d.key) {
-                    statusBox.innerHTML = `<div class="key">KEY: ${d.key}</div>`;
-                    btnVerify.disabled = false;
-                } else {
+                statusBox.innerHTML = `<div class="key">KEY: ${d.key}</div>`;
+                btnVerify.disabled = false;
+                clearInterval(interval);
+            } else {
+                tries++;
+                if (tries > 20) { // ~10s timeout
+                    loader.classList.add("hidden");
                     statusBox.innerHTML = "❌ Không lấy được mã 😭";
                     btnGet.disabled = false;
+                    clearInterval(interval);
                 }
-            })
-            .catch(() => {
-                loader.classList.add("hidden");
-                statusBox.innerHTML = "💥 Lỗi kết nối server";
-                btnGet.disabled = false;
-            });
-    }, 13000);
+            }
+        }).catch(() => {
+            loader.classList.add("hidden");
+            statusBox.innerHTML = "💥 Lỗi kết nối server";
+            btnGet.disabled = false;
+            clearInterval(interval);
+        });
+    }, 500);
 }
 
 function verify() {
     btnVerify.disabled = true;
     loader.classList.remove("hidden");
+    statusBox.innerHTML = "🔐 Đang xác thực...";
 
-    statusBox.innerHTML = "🔐 Đang xác thực... đứng yên nha 😆";
-
-    fetch("/verify", { method: "POST" })
-        .then(() => {
-            setTimeout(() => {
-                loader.classList.add("hidden");
-                statusBox.innerHTML = "✅ Xác thực xong! Chuẩn bài 😎";
-                btnGet.disabled = false;
-            }, 2500);
-        });
+    fetch("/verify", { method: "POST" }).then(() => {
+        setTimeout(() => {
+            loader.classList.add("hidden");
+            statusBox.innerHTML = "✅ Xác thực xong! Chuẩn bài 😎";
+            btnGet.disabled = false;
+        }, 2500);
+    });
 }
 </script>
 
