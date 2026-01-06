@@ -6,8 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-let command = "idle";
-let lastKey = "";
+let command = "idle";   // Lệnh Python cần thực hiện
+let lastKey = "";       // Key mới nhất
 
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
@@ -18,26 +18,31 @@ app.get("/command", (req, res) => {
     res.json({ command });
 });
 
-// Nút LẤY MÃ
+// Web bấm LẤY MÃ
 app.post("/start", (req, res) => {
     command = "GET_KEY";
+    lastKey = ""; // reset key mới
     res.json({ status: "ok" });
 });
 
-// Nút XÁC THỰC
+// Web bấm XÁC THỰC
 app.post("/verify", (req, res) => {
     command = "VERIFY";
     res.json({ status: "ok" });
 });
 
-// Python gửi kết quả về
+// Python gửi key mới về
 app.post("/result", (req, res) => {
-    lastKey = req.body.key || "";
-    command = "idle";
+    const { key } = req.body;
+    if (key) {
+        lastKey = key;
+        console.log("✅ Key mới:", key);
+    }
+    command = "idle"; // reset lệnh
     res.json({ status: "received" });
 });
 
-// Web lấy key
+// Web GET key
 app.get("/key", (req, res) => {
     res.json({ key: lastKey });
 });
